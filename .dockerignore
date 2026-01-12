@@ -1,0 +1,30 @@
+# 忽略 Git 相關檔案
+.git
+.gitignore
+
+# 忽略建置輸出
+**/bin/
+**/obj/
+**/out/
+
+# 忽略測試專案
+tests/
+
+# 忽略 IDE 設定
+.vs/
+.vscode/
+*.user
+*.suo
+
+# 忽略日誌檔案
+logs/
+*.log
+
+# 忽略文件
+*.md
+docs/
+
+# 忽略 Docker 相關
+docker-compose*.yml
+Dockerfile*
+.dockerignore

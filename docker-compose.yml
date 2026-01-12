@@ -1,0 +1,81 @@
+services:
+  # ASP.NET Core Web API 服務
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dotnetapi-demo
+    ports:
+      - "8004:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=dotnetdemo_db;User=root;Password=dev123;
+      - ConnectionStrings__Redis=redis:6379
+      - Jwt__SecretKey=YourSuperSecretKeyForJwtTokenGenerationMustBeLongEnough123456
+      - Jwt__Issuer=DotnetApiDemo
+      - Jwt__Audience=DotnetApiDemo
+      - Jwt__ExpirationMinutes=60
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - dotnetapi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./logs:/app/logs
+
+  # MySQL 8.4 資料庫服務
+  mysql:
+    image: mysql:8.4
+    container_name: dotnetapi-mysql
+    ports:
+      - "3304:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=dev123
+      - MYSQL_DATABASE=dotnetdemo_db
+      - MYSQL_ROOT_HOST=%
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - dotnetapi-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pdev123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Redis 快取服務
+  redis:
+    image: redis:7-alpine
+    container_name: dotnetapi-redis
+    ports:
+      - "6384:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - dotnetapi-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: redis-server --appendonly yes
+
+networks:
+  dotnetapi-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
