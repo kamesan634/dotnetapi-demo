@@ -1,6 +1,6 @@
-# 零售業 ERP API - .NET Core Web API 專案
+# 龜三的ERP Demo - .NET Core Web API 專案
 
-![CI](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/kamesan634/dotnetapi-demo/actions/workflows/ci.yml/badge.svg)
 
 基於 .NET 8 + ASP.NET Core Web API + Entity Framework Core 的零售業 ERP 系統 RESTful API。
 
