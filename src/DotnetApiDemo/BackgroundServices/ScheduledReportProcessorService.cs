@@ -122,7 +122,8 @@ public class ScheduledReportProcessorService : BackgroundService
             if (reportData != null && reportData.Length > 0)
             {
                 outputPath = await SaveReportFileAsync(scheduledReport, reportData);
-                recordCount = reportData.Length; // 簡化記錄數量為檔案大小
+                // 計算實際記錄數量（CSV 行數減去標題行）
+                recordCount = CountCsvRecords(reportData);
             }
 
             // 發送報表（如果設定為 Email）
@@ -244,17 +245,81 @@ public class ScheduledReportProcessorService : BackgroundService
         return filePath;
     }
 
-    private Task SendReportEmailAsync(ScheduledReport scheduledReport, byte[]? data, string? filePath)
+    private async Task SendReportEmailAsync(ScheduledReport scheduledReport, byte[]? data, string? filePath)
     {
-        // 這裡可以整合實際的 Email 發送服務
-        // 目前僅記錄日誌
-        _logger.LogInformation(
-            "排程報表 Email 發送 - Id: {Id}, Recipients: {Recipients}, FilePath: {FilePath}",
-            scheduledReport.Id,
-            scheduledReport.RecipientEmails,
-            filePath);
+        if (string.IsNullOrEmpty(scheduledReport.RecipientEmails))
+        {
+            _logger.LogWarning("排程報表 Email 發送跳過 - 無收件人設定, Id: {Id}", scheduledReport.Id);
+            return;
+        }
 
-        return Task.CompletedTask;
+        var recipients = scheduledReport.RecipientEmails
+            .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(e => e.Trim())
+            .Where(e => !string.IsNullOrEmpty(e))
+            .ToList();
+
+        if (!recipients.Any())
+        {
+            _logger.LogWarning("排程報表 Email 發送跳過 - 收件人清單為空, Id: {Id}", scheduledReport.Id);
+            return;
+        }
+
+        // 建立郵件內容
+        var subject = $"[排程報表] {scheduledReport.Name} - {DateTime.UtcNow:yyyy-MM-dd}";
+        var body = $@"
+排程報表已產生
+
+報表名稱: {scheduledReport.Name}
+報表類型: {scheduledReport.ReportType ?? scheduledReport.CustomReport?.Name ?? "自訂報表"}
+產生時間: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} (UTC)
+輸出格式: {scheduledReport.OutputFormat}
+檔案路徑: {filePath ?? "無"}
+
+此為系統自動發送郵件，請勿直接回覆。
+";
+
+        // 記錄郵件發送資訊（實際整合時可替換為 SMTP 服務）
+        _logger.LogInformation(
+            "排程報表 Email 發送 - Id: {Id}, Subject: {Subject}, Recipients: {Recipients}, HasAttachment: {HasAttachment}",
+            scheduledReport.Id,
+            subject,
+            string.Join(", ", recipients),
+            data != null && data.Length > 0);
+
+        // 模擬非同步操作（實際整合 SMTP 服務時替換此處）
+        await Task.CompletedTask;
+
+        // 註：實際整合 Email 服務時，可使用以下程式碼結構：
+        // using var smtpClient = new SmtpClient();
+        // var message = new MailMessage();
+        // message.Subject = subject;
+        // message.Body = body;
+        // foreach (var recipient in recipients) message.To.Add(recipient);
+        // if (data != null) message.Attachments.Add(new Attachment(new MemoryStream(data), fileName));
+        // await smtpClient.SendMailAsync(message);
+    }
+
+    /// <summary>
+    /// 計算 CSV 報表的實際記錄數量
+    /// </summary>
+    private static int CountCsvRecords(byte[] data)
+    {
+        if (data == null || data.Length == 0)
+            return 0;
+
+        try
+        {
+            var content = System.Text.Encoding.UTF8.GetString(data);
+            var lines = content.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            // 減去標題行，至少返回 0
+            return Math.Max(0, lines.Length - 1);
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     private DateTime? CalculateNextRunTime(ScheduledReport report)

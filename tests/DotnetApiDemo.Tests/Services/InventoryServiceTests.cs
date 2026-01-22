@@ -5,7 +5,6 @@ using DotnetApiDemo.Data;
 using DotnetApiDemo.Models.DTOs.Common;
 using DotnetApiDemo.Models.DTOs.Inventory;
 using DotnetApiDemo.Services.Implementations;
-using DotnetApiDemo.Services.Interfaces;
 using DotnetApiDemo.Tests.TestHelpers;
 using Xunit;
 
@@ -19,23 +18,12 @@ public class InventoryServiceTests : IDisposable
     private readonly ApplicationDbContext _context;
     private readonly InventoryService _service;
     private readonly Mock<ILogger<InventoryService>> _loggerMock;
-    private readonly Mock<IDistributedLockService> _lockMock;
-    private readonly Mock<INotificationService> _notificationMock;
-    private readonly Mock<IAuditQueueService> _auditMock;
 
     public InventoryServiceTests()
     {
         _context = MockDbContextFactory.CreateWithSeedData();
         _loggerMock = new Mock<ILogger<InventoryService>>();
-        _lockMock = new Mock<IDistributedLockService>();
-        _notificationMock = new Mock<INotificationService>();
-        _auditMock = new Mock<IAuditQueueService>();
-
-        // Setup lock mock to always acquire successfully
-        _lockMock.Setup(x => x.AcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan>()))
-            .ReturnsAsync(true);
-
-        _service = new InventoryService(_context, _loggerMock.Object, _lockMock.Object, _notificationMock.Object, _auditMock.Object);
+        _service = new InventoryService(_context, _loggerMock.Object);
     }
 
     public void Dispose()
@@ -44,59 +32,65 @@ public class InventoryServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task GetInventoryAsync_ReturnsInventory()
+    public async Task GetInventoriesAsync_ReturnsInventory()
     {
         // Arrange
         var request = new PaginationRequest { PageNumber = 1, PageSize = 10 };
 
         // Act
-        var result = await _service.GetInventoryAsync(request);
+        var result = await _service.GetInventoriesAsync(request);
 
         // Assert
         result.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task GetLowStockAlertsAsync_ReturnsAlerts()
-    {
-        // Act
-        var result = await _service.GetLowStockAlertsAsync();
-
-        // Assert
-        result.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task GetInventoryByProductAsync_ExistingProduct_ReturnsInventory()
-    {
-        // Act
-        var result = await _service.GetInventoryByProductAsync(1);
-
-        // Assert
-        result.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task GetInventoryByWarehouseAsync_ExistingWarehouse_ReturnsInventory()
+    public async Task GetInventoriesAsync_WithWarehouseFilter_ReturnsFilteredInventory()
     {
         // Arrange
         var request = new PaginationRequest { PageNumber = 1, PageSize = 10 };
 
         // Act
-        var result = await _service.GetInventoryByWarehouseAsync(1, request);
+        var result = await _service.GetInventoriesAsync(request, warehouseId: 1);
 
         // Assert
         result.Should().NotBeNull();
     }
 
     [Fact]
-    public async Task GetInventorySummaryAsync_ReturnsSummary()
+    public async Task GetInventoriesAsync_WithProductFilter_ReturnsFilteredInventory()
     {
+        // Arrange
+        var request = new PaginationRequest { PageNumber = 1, PageSize = 10 };
+
         // Act
-        var result = await _service.GetInventorySummaryAsync();
+        var result = await _service.GetInventoriesAsync(request, productId: 1);
 
         // Assert
         result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetInventoryByIdAsync_ExistingId_ReturnsInventory()
+    {
+        // Arrange - get first inventory from seed data
+        var inventory = _context.Inventories.First();
+
+        // Act
+        var result = await _service.GetInventoryByIdAsync(inventory.Id);
+
+        // Assert
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetInventoryByIdAsync_NonExistingId_ReturnsNull()
+    {
+        // Act
+        var result = await _service.GetInventoryByIdAsync(99999);
+
+        // Assert
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -135,5 +129,35 @@ public class InventoryServiceTests : IDisposable
 
         // Assert
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TransferInventoryAsync_WithValidData_ReturnsTrue()
+    {
+        // Arrange
+        var request = new TransferInventoryRequest
+        {
+            ProductId = 1,
+            FromWarehouseId = 1,
+            ToWarehouseId = 1,
+            Quantity = 5,
+            Reason = "測試轉移"
+        };
+
+        // Act
+        var result = await _service.TransferInventoryAsync(request, 1);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetLowStockAlertsAsync_ReturnsAlerts()
+    {
+        // Act
+        var result = await _service.GetLowStockAlertsAsync();
+
+        // Assert
+        result.Should().NotBeNull();
     }
 }

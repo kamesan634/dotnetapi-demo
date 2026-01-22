@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using DotnetApiDemo.Data;
 using DotnetApiDemo.Models.DTOs.Common;
-using DotnetApiDemo.Models.DTOs.Promotions;
+using DotnetApiDemo.Models.DTOs.Coupons;
 using DotnetApiDemo.Services.Implementations;
 using DotnetApiDemo.Tests.TestHelpers;
 using Xunit;
@@ -51,11 +51,9 @@ public class CouponServiceTests : IDisposable
         var request = new CreateCouponRequest
         {
             Code = $"COUP{DateTime.UtcNow.Ticks}",
-            Name = "新優惠券",
-            DiscountType = "Fixed",
-            DiscountValue = 50,
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1))
+            PromotionId = 1,
+            ValidFrom = DateTime.UtcNow,
+            ValidTo = DateTime.UtcNow.AddMonths(1)
         };
 
         // Act
@@ -67,17 +65,60 @@ public class CouponServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateCouponAsync_WithDuplicateCode_ReturnsNull()
+    {
+        // Arrange
+        var code = $"DUP{DateTime.UtcNow.Ticks}";
+        await _service.CreateCouponAsync(new CreateCouponRequest
+        {
+            Code = code,
+            PromotionId = 1,
+            ValidFrom = DateTime.UtcNow,
+            ValidTo = DateTime.UtcNow.AddMonths(1)
+        });
+
+        // Act
+        var result = await _service.CreateCouponAsync(new CreateCouponRequest
+        {
+            Code = code,
+            PromotionId = 1,
+            ValidFrom = DateTime.UtcNow,
+            ValidTo = DateTime.UtcNow.AddMonths(1)
+        });
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateCouponAsync_WithInvalidPromotion_ReturnsNull()
+    {
+        // Arrange
+        var request = new CreateCouponRequest
+        {
+            Code = $"INV{DateTime.UtcNow.Ticks}",
+            PromotionId = 99999,
+            ValidFrom = DateTime.UtcNow,
+            ValidTo = DateTime.UtcNow.AddMonths(1)
+        };
+
+        // Act
+        var result = await _service.CreateCouponAsync(request);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
     public async Task GetCouponByIdAsync_ExistingId_ReturnsCoupon()
     {
         // Arrange
         var createResult = await _service.CreateCouponAsync(new CreateCouponRequest
         {
             Code = $"GET{DateTime.UtcNow.Ticks}",
-            Name = "查詢優惠券",
-            DiscountType = "Fixed",
-            DiscountValue = 50,
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1))
+            PromotionId = 1,
+            ValidFrom = DateTime.UtcNow,
+            ValidTo = DateTime.UtcNow.AddMonths(1)
         });
 
         // Act
@@ -98,17 +139,58 @@ public class CouponServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetCouponByCodeAsync_ExistingCode_ReturnsCoupon()
+    {
+        // Arrange
+        var code = $"CODE{DateTime.UtcNow.Ticks}";
+        await _service.CreateCouponAsync(new CreateCouponRequest
+        {
+            Code = code,
+            PromotionId = 1,
+            ValidFrom = DateTime.UtcNow,
+            ValidTo = DateTime.UtcNow.AddMonths(1)
+        });
+
+        // Act
+        var result = await _service.GetCouponByCodeAsync(code);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Code.Should().Be(code);
+    }
+
+    [Fact]
+    public async Task UpdateCouponAsync_ExistingId_ReturnsTrue()
+    {
+        // Arrange
+        var createResult = await _service.CreateCouponAsync(new CreateCouponRequest
+        {
+            Code = $"UPD{DateTime.UtcNow.Ticks}",
+            PromotionId = 1,
+            ValidFrom = DateTime.UtcNow,
+            ValidTo = DateTime.UtcNow.AddMonths(1)
+        });
+
+        // Act
+        var result = await _service.UpdateCouponAsync(createResult!.Value, new UpdateCouponRequest
+        {
+            ValidTo = DateTime.UtcNow.AddMonths(2)
+        });
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task DeleteCouponAsync_ExistingId_ReturnsTrue()
     {
         // Arrange
         var createResult = await _service.CreateCouponAsync(new CreateCouponRequest
         {
             Code = $"DEL{DateTime.UtcNow.Ticks}",
-            Name = "刪除優惠券",
-            DiscountType = "Fixed",
-            DiscountValue = 50,
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1))
+            PromotionId = 1,
+            ValidFrom = DateTime.UtcNow,
+            ValidTo = DateTime.UtcNow.AddMonths(1)
         });
 
         // Act
@@ -119,35 +201,12 @@ public class CouponServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidateCouponAsync_ValidCode_ReturnsValid()
-    {
-        // Arrange
-        var code = $"VAL{DateTime.UtcNow.Ticks}";
-        await _service.CreateCouponAsync(new CreateCouponRequest
-        {
-            Code = code,
-            Name = "驗證優惠券",
-            DiscountType = "Fixed",
-            DiscountValue = 50,
-            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1))
-        });
-
-        // Act
-        var result = await _service.ValidateCouponAsync(code, 100);
-
-        // Assert
-        result.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task ValidateCouponAsync_InvalidCode_ReturnsInvalid()
+    public async Task DeleteCouponAsync_NonExistingId_ReturnsFalse()
     {
         // Act
-        var result = await _service.ValidateCouponAsync("INVALID_CODE", 100);
+        var result = await _service.DeleteCouponAsync(99999);
 
         // Assert
-        result.Should().NotBeNull();
-        result!.IsValid.Should().BeFalse();
+        result.Should().BeFalse();
     }
 }

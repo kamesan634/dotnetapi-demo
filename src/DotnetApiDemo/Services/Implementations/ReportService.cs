@@ -88,6 +88,7 @@ public class ReportService : IReportService
     /// <inheritdoc />
     public async Task<IEnumerable<SalesReportDto>> GetSalesReportAsync(DateOnly startDate, DateOnly endDate)
     {
+        // 取得銷售資料
         var salesData = await _context.Orders
             .Where(o => o.OrderDate >= startDate && o.OrderDate <= endDate && o.Status != OrderStatus.Cancelled)
             .GroupBy(o => o.OrderDate)
@@ -97,13 +98,35 @@ public class ReportService : IReportService
                 TotalSales = g.Sum(o => o.TotalAmount),
                 OrderCount = g.Count(),
                 AverageOrderValue = g.Count() > 0 ? g.Sum(o => o.TotalAmount) / g.Count() : 0,
-                RefundAmount = 0, // TODO: 實作退貨金額計算
+                RefundAmount = 0,
                 NetSales = g.Sum(o => o.TotalAmount),
                 TaxAmount = g.Sum(o => o.TaxAmount),
                 DiscountAmount = g.Sum(o => o.DiscountAmount)
             })
             .OrderBy(s => s.Date)
             .ToListAsync();
+
+        // 取得退貨資料並按日期彙整
+        var startDateTime = startDate.ToDateTime(TimeOnly.MinValue);
+        var endDateTime = endDate.ToDateTime(TimeOnly.MaxValue);
+
+        var refundData = await _context.SalesReturns
+            .Where(r => r.CreatedAt >= startDateTime &&
+                       r.CreatedAt <= endDateTime &&
+                       r.Status == SalesReturnStatus.Completed)
+            .GroupBy(r => DateOnly.FromDateTime(r.CreatedAt))
+            .Select(g => new { Date = g.Key, RefundAmount = g.Sum(r => r.RefundAmount) })
+            .ToDictionaryAsync(x => x.Date, x => x.RefundAmount);
+
+        // 將退貨金額填入報表並計算淨銷售額
+        foreach (var item in salesData)
+        {
+            if (refundData.TryGetValue(item.Date, out var refundAmount))
+            {
+                item.RefundAmount = refundAmount;
+            }
+            item.NetSales = item.TotalSales - item.RefundAmount;
+        }
 
         _logger.LogInformation("取得銷售報表成功 - 期間: {StartDate} ~ {EndDate}, 筆數: {Count}",
             startDate, endDate, salesData.Count);

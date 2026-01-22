@@ -26,7 +26,7 @@ public class CategoryServiceTests : IDisposable
         _context = MockDbContextFactory.CreateWithSeedData();
         _loggerMock = new Mock<ILogger<CategoryService>>();
         _cacheMock = new Mock<ICacheService>();
-        _service = new CategoryService(_context, _loggerMock.Object, _cacheMock.Object);
+        _service = new CategoryService(_context, _cacheMock.Object, _loggerMock.Object);
     }
 
     public void Dispose()

@@ -5,7 +5,6 @@ using DotnetApiDemo.Data;
 using DotnetApiDemo.Models.DTOs.Common;
 using DotnetApiDemo.Models.DTOs.Products;
 using DotnetApiDemo.Services.Implementations;
-using DotnetApiDemo.Services.Interfaces;
 using DotnetApiDemo.Tests.TestHelpers;
 using Xunit;
 
@@ -19,14 +18,12 @@ public class ProductServiceTests : IDisposable
     private readonly ApplicationDbContext _context;
     private readonly ProductService _service;
     private readonly Mock<ILogger<ProductService>> _loggerMock;
-    private readonly Mock<ICacheService> _cacheMock;
 
     public ProductServiceTests()
     {
         _context = MockDbContextFactory.CreateWithSeedData();
         _loggerMock = new Mock<ILogger<ProductService>>();
-        _cacheMock = new Mock<ICacheService>();
-        _service = new ProductService(_context, _loggerMock.Object, _cacheMock.Object);
+        _service = new ProductService(_context, _loggerMock.Object);
     }
 
     public void Dispose()

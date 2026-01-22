@@ -186,6 +186,23 @@ public static class MockDbContextFactory
             );
         }
 
+        // 促銷活動
+        if (!context.Promotions.Any())
+        {
+            context.Promotions.Add(new Promotion
+            {
+                Id = 1,
+                Code = "PROMO001",
+                Name = "測試促銷活動",
+                PromotionType = PromotionType.Discount,
+                Status = PromotionStatus.Active,
+                DiscountValue = 90,
+                StartDate = DateTime.UtcNow.AddDays(-1),
+                EndDate = DateTime.UtcNow.AddMonths(1),
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
         context.SaveChanges();
     }
 

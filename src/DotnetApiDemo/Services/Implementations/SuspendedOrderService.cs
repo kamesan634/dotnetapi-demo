@@ -75,7 +75,7 @@ public class SuspendedOrderService : ISuspendedOrderService
                 OrderNo = o.OrderNo,
                 StoreId = o.StoreId,
                 StoreName = o.Store.Name,
-                CashierName = o.Cashier.FullName ?? o.Cashier.UserName ?? "",
+                CashierName = o.Cashier.RealName ?? o.Cashier.UserName ?? "",
                 CustomerName = o.CustomerName,
                 Reason = o.Reason,
                 ItemCount = o.Items.Count,
@@ -110,7 +110,7 @@ public class SuspendedOrderService : ISuspendedOrderService
                 StoreId = o.StoreId,
                 StoreName = o.Store.Name,
                 CashierId = o.CashierId,
-                CashierName = o.Cashier.FullName ?? o.Cashier.UserName ?? "",
+                CashierName = o.Cashier.RealName ?? o.Cashier.UserName ?? "",
                 CustomerId = o.CustomerId,
                 CustomerName = o.CustomerName,
                 Reason = o.Reason,
@@ -195,6 +195,14 @@ public class SuspendedOrderService : ISuspendedOrderService
             var originalPrice = product.SellingPrice;
             var itemSubtotal = unitPrice * itemRequest.Quantity - itemRequest.DiscountAmount;
 
+            // 計算稅額：根據商品的稅別和稅率計算
+            decimal itemTaxAmount = 0;
+            if (product.TaxType == TaxType.Taxable && product.TaxRate > 0)
+            {
+                // 稅額 = 小計 * 稅率 / (100 + 稅率)，採用內含稅計算方式
+                itemTaxAmount = Math.Round(itemSubtotal * product.TaxRate / (100 + product.TaxRate), 2);
+            }
+
             var item = new SuspendedOrderItem
             {
                 ProductId = product.Id,
@@ -206,22 +214,24 @@ public class SuspendedOrderService : ISuspendedOrderService
                 OriginalPrice = originalPrice,
                 DiscountAmount = itemRequest.DiscountAmount,
                 Subtotal = itemSubtotal,
-                TaxAmount = 0, // 簡化處理
+                TaxAmount = itemTaxAmount,
                 Notes = itemRequest.Notes
             };
 
-            // 如果有規格，取得規格名稱
+            // 如果有規格，取得規格名稱並調整價格
             if (itemRequest.VariantId.HasValue)
             {
                 var variant = await _context.ProductVariants
                     .FirstOrDefaultAsync(v => v.Id == itemRequest.VariantId.Value);
                 if (variant != null)
                 {
-                    item.VariantName = variant.Name;
+                    item.VariantName = variant.VariantName;
                     if (itemRequest.UnitPrice == null)
                     {
-                        item.UnitPrice = variant.SellingPrice;
-                        item.Subtotal = variant.SellingPrice * itemRequest.Quantity - itemRequest.DiscountAmount;
+                        // 規格價格 = 商品售價 + 規格加價
+                        var variantPrice = product.SellingPrice + (variant.AdditionalPrice ?? 0);
+                        item.UnitPrice = variantPrice;
+                        item.Subtotal = variantPrice * itemRequest.Quantity - itemRequest.DiscountAmount;
                     }
                 }
             }
@@ -229,6 +239,7 @@ public class SuspendedOrderService : ISuspendedOrderService
             suspendedOrder.Items.Add(item);
             subtotal += item.Subtotal;
             totalDiscount += itemRequest.DiscountAmount;
+            totalTax += item.TaxAmount;
         }
 
         suspendedOrder.Subtotal = subtotal + totalDiscount;

@@ -13,6 +13,11 @@
     <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
+  <!-- 允許測試專案存取內部類別 -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="DotnetApiDemo.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <!-- Entity Framework Core -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />

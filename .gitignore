@@ -1,0 +1,147 @@
+# 專案特定忽略
+.claude/
+docs/
+
+# =========================
+# .NET / C# 相關
+# =========================
+
+# 編譯輸出
+bin/
+obj/
+out/
+build/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Ll]og/
+[Ll]ogs/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# .NET Core
+*.publishproj
+
+# =========================
+# IDE / 編輯器
+# =========================
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+*.pfx
+*.publishsettings
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains Rider / IntelliJ
+.idea/
+*.sln.iml
+
+# =========================
+# 測試相關
+# =========================
+TestResults/
+*.trx
+coverage/
+*.coverage
+*.coveragexml
+coverlet/
+*.opencover.xml
+
+# =========================
+# 環境設定 (避免洩漏密鑰)
+# =========================
+appsettings.Development.json
+appsettings.Local.json
+appsettings.Production.json
+*.local.json
+.env
+.env.*
+!.env.example
+secrets.json
+credentials.json
+
+# =========================
+# 日誌與暫存
+# =========================
+*.log
+*.tmp
+*.temp
+*.cache
+*.bak
+*.swp
+*~
+
+# =========================
+# OS 產生的檔案
+# =========================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# =========================
+# Docker
+# =========================
+docker-compose.override.yml
+.docker/
+
+# =========================
+# 其他
+# =========================
+
+# 壓縮檔
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# 資料庫檔案
+*.mdf
+*.ldf
+*.db
+*.sqlite
+
+# 憑證
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Node (如果有前端)
+node_modules/
+npm-debug.log
+yarn-error.log

@@ -5,7 +5,6 @@ using DotnetApiDemo.Data;
 using DotnetApiDemo.Models.DTOs.Common;
 using DotnetApiDemo.Models.DTOs.Purchasing;
 using DotnetApiDemo.Services.Implementations;
-using DotnetApiDemo.Services.Interfaces;
 using DotnetApiDemo.Tests.TestHelpers;
 using Xunit;
 
@@ -19,20 +18,12 @@ public class PurchaseOrderServiceTests : IDisposable
     private readonly ApplicationDbContext _context;
     private readonly PurchaseOrderService _service;
     private readonly Mock<ILogger<PurchaseOrderService>> _loggerMock;
-    private readonly Mock<INumberRuleService> _numberRuleMock;
-    private readonly Mock<IAuditQueueService> _auditMock;
 
     public PurchaseOrderServiceTests()
     {
         _context = MockDbContextFactory.CreateWithSeedData();
         _loggerMock = new Mock<ILogger<PurchaseOrderService>>();
-        _numberRuleMock = new Mock<INumberRuleService>();
-        _auditMock = new Mock<IAuditQueueService>();
-
-        _numberRuleMock.Setup(x => x.GenerateNumberAsync(It.IsAny<string>()))
-            .ReturnsAsync($"PO{DateTime.UtcNow:yyyyMMddHHmmss}");
-
-        _service = new PurchaseOrderService(_context, _loggerMock.Object, _numberRuleMock.Object, _auditMock.Object);
+        _service = new PurchaseOrderService(_context, _loggerMock.Object);
     }
 
     public void Dispose()
@@ -83,5 +74,18 @@ public class PurchaseOrderServiceTests : IDisposable
 
         // Assert
         result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetPurchaseOrdersAsync_WithSupplierFilter_ReturnsFilteredOrders()
+    {
+        // Arrange
+        var request = new PaginationRequest { PageNumber = 1, PageSize = 10 };
+
+        // Act
+        var result = await _service.GetPurchaseOrdersAsync(request, supplierId: 1);
+
+        // Assert
+        result.Should().NotBeNull();
     }
 }

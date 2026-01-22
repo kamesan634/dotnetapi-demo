@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using DotnetApiDemo.Models.DTOs.Common;
-using DotnetApiDemo.Models.DTOs.Payments;
+using DotnetApiDemo.Models.DTOs.PaymentMethods;
 using DotnetApiDemo.Tests.TestHelpers;
 using Xunit;
 

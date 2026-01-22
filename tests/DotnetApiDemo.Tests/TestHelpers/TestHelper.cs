@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using DotnetApiDemo.Models.DTOs.Auth;
 using DotnetApiDemo.Models.DTOs.Common;
 using DotnetApiDemo.Models.Entities;
+using DotnetApiDemo.Tests;
 
 namespace DotnetApiDemo.Tests.TestHelpers;
 
@@ -56,7 +57,7 @@ public static class TestHelper
             {
                 UserName = userName,
                 Email = $"{userName}@test.com",
-                FullName = $"Test {role}",
+                RealName = $"Test {role}",
                 IsActive = true
             };
             await userManager.CreateAsync(user, "Test123!");
